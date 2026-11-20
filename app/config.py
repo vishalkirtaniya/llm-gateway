@@ -8,8 +8,8 @@ load_dotenv()
 class Settings:
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "openai/gpt/gpt-4o-mini")
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "openai/text-embedding-3-small")
+    DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "nvidia/nemotron-3.5-super-vl:free")
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "nvidia/nemotron-3.5-embed-1b:free")
     APP_URL: str = os.getenv("APP_URL", "http://locahost:8000")
     APP_NAME: str = os.getenv("APP_NAME", "llm-gateway")
     

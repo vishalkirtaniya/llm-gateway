@@ -4,7 +4,7 @@ from typing import Optional
 
 import httpx
 
-from config import Settings
+from .config import Settings
 
 settings = Settings()
 
@@ -68,7 +68,8 @@ async def chat(
         messages: list, 
         temperature: float = 0.0, 
         max_tokens: Optional[int] = None,
-        json_mode: bool = False
+        json_mode: bool = False,
+        reasoning: Optional[bool] = None,
     ) -> str:
     payload = {
         "model": settings.DEFAULT_MODEL,
@@ -78,11 +79,23 @@ async def chat(
     }
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
+    if reasoning is not None:
+        payload["reasoning"] = {"type": reasoning}
+
     data = await _post("/chat/completions", payload)
     if "error" in data:
         raise LLMError(502, f"Model error: {data['error']}")
+
     _record_usage(data.get("usage", {}))
-    return data["choices"][0]["messages"]["content"] or ""
+    choice = data["choices"][0]
+    text = (choice["message"].get("content" or "").strip())
+    if not text:
+        raise LLMError(
+            502,
+            f"Empty reply (finish_reason={choice.get('finish_reason')})."
+            "If it is 'length', raise max_tokens or call with reasoning=False."
+        )
+    return text
 
 async def embed(texts: list) -> list:
     payload = {"model": settings.EMBEDDING_MODEL, "input": texts}
