@@ -41,7 +41,7 @@ def _few_shot_block() -> str:
     return "\n".join(lines)
 
 def build_user_prompt(question: str, context: str, history: str, mode: str) -> str:
-    if mode not in ("direct", "cot"):
+    if mode not in ("direct", "cot", "plain"):
         raise ValueError(f"unknown mode: {mode}")
 
     parts = []
@@ -62,7 +62,7 @@ def build_user_prompt(question: str, context: str, history: str, mode: str) -> s
             "Let's think step by step. Show brief reasoning, then finish with one last line. \n"
             "in exactly this format: 'Final answer:<short answer>'."
         )
-    else:
+    elif mode == "direct":
         parts.append("Answer directly and concisely in at most 120 words.")
 
     return "\n\n".join(parts)

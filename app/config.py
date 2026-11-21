@@ -15,7 +15,7 @@ class Settings:
     
     REQUEST_TIMEOUT: float = 60.0
     MAX_RETRIES: int = 3 
-    MAX_OUTPUT_TOKENS: int = 800
+    MAX_OUTPUT_TOKENS: int = 2000
 
     CONTEXT_WINDOW: int = 128_000
     GENERATION_RESERVE: int = 4_000
@@ -29,6 +29,7 @@ class Settings:
     TOT_BREADTH: int = 2
     TOT_DEPTH: int = 2
     TOT_BEAM: int = 2
+    MAX_CONCURRENT_CALLS: int = 2
 
     KNOWLEDGE_DIR: Path = Path(__file__).resolve().parent.parent / "data" / "knowledge"
 
