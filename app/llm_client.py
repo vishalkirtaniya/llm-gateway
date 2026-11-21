@@ -88,7 +88,7 @@ async def chat(
 
     _record_usage(data.get("usage", {}))
     choice = data["choices"][0]
-    text = (choice["message"].get("content" or "").strip())
+    text = (choice["message"].get("content") or "").strip()
     if not text:
         raise LLMError(
             502,

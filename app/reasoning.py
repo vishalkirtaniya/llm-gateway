@@ -8,7 +8,7 @@ from .config import settings
 from .llm_client import LLMError, chat
 
 # at most N requests in flight at once
-_semaphore = asyncio.Semaphore(settings.MAX_CURRENT_CALLS)
+_semaphore = asyncio.Semaphore(settings.MAX_CONCURRENT_CALLS)
 
 @dataclass
 # What every strategy returns
@@ -21,12 +21,8 @@ class ReasoningResult:
 
 def _messages(system: str, user: str) -> list:
     return [
-        {
-            "role": "system", "content": system
-        }, 
-        {
-            "role": "user", "content": user
-        },
+        { "role": "system", "content": system }, 
+        { "role": "user", "content": user },
     ]
 
 async def _limited_chat(*args, **kwargs) -> str:
@@ -41,7 +37,7 @@ def extract_final(text: str) -> str:
     return matches[-1].strip("*")
 
 def _normalize(answer: str) -> str:
-    cleaned = re.sub(r"[$,*]", "".answer.lower()) # drops currency sign, thousands, commas, markdowns stars
+    cleaned = re.sub(r"[$,*]", "", answer.lower()) # drops currency sign, thousands, commas, markdowns stars
     cleaned = " ".join(cleaned.split()).rstrip(".")
     try:
         return str(float(cleaned))
@@ -54,15 +50,15 @@ def choose_strategy(question: str) -> str:
      has_keywords = any(w in q for w in ("why", "how many", "calculate", "compare", "explain", "difference"))
      return "cot" if has_digits or has_keywords else "direct"
 
- async def solve_direct(system: str, user: str) -> ReasoningResult:
-     text = await _limited_chat(_messages(system, user, temperature=0.0))
-     return ReasoningResult(final_answer=text.split(), full_text=text, strategy="direct")
+async def solve_direct(system: str, user: str) -> ReasoningResult:
+     text = await _limited_chat(_messages(system, user), temperature=0.0)
+     return ReasoningResult(final_answer=text.strip(), full_text=text, strategy="direct")
 
- async def solve_cot(system: str, user: str) -> ReasoningResult:
-     text await _limited_chat(_messages(system, user, temperature=0.0))
+async def solve_cot(system: str, user: str) -> ReasoningResult:
+     text = await _limited_chat(_messages(system, user), temperature=0.0)
      return ReasoningResult(final_answer=extract_final(text), full_text=text, strategy="cot")
 
- async def solve_self_consistency(system: str, user: str, n: int) -> ReasoningResult:
+async def solve_self_consistency(system: str, user: str, n: int) -> ReasoningResult:
      runs = await asyncio.gather(
                 # start all samples together ( the samaphore limits real concurrency)
                 *[_limited_chat(_messages(system, user), temperature=0.7) for _ in range(n)],
@@ -82,7 +78,7 @@ def choose_strategy(question: str) -> str:
                 final_answer=finals[idx],
                 full_text=texts[idx],
                 strategy="self_consistency",
-                confidence=round(count/len(text), 2),
+                confidence=round(count/len(texts), 2),
                 details={"votes": dict(votes), "samples_ok":len(texts), "samples_failed":n-len(texts)},
             )
 
@@ -105,6 +101,12 @@ async def _score(system: str, problem: str, path: str) -> float:
         "How promising and correct is this reasoning for solving problem? \n"
         "Reply with ONLY a number between 0.0 to 1.0"
     )
+    try:
+        text = await _limited_chat(_messages(system, prompt), temperature=0.9, max_tokens=300, reasoning=False)
+    except LLMError:
+        return 0.0
+    match = re.search(r"\d*?\d", text)
+    return max(0.0, min(1.0, float(match.group()))) if match else 0.0
 
 async def solve_tot(system: str, problem: str) -> ReasoningResult:
     beams = [""]
@@ -134,7 +136,7 @@ async def solve_tot(system: str, problem: str) -> ReasoningResult:
 async def run_strategy(strategy: str, system: str, user_prompt: str, plain_prompt: str) -> ReasoningResult:
     if strategy == "direct":
         return await solve_direct(system, user_prompt)
-    elif stratgy == "cot":
+    elif strategy == "cot":
         return await solve_cot(system, user_prompt)
     elif strategy == "self_consistency":
         return await solve_self_consistency(system, user_prompt, settings.SELF_CONSISTENCY_SAMPLES)
