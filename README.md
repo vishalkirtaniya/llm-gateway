@@ -37,7 +37,7 @@ The service sends a question to an LLM through an OpenAI-compatible API (develop
   - Files: `app/structured.py`
   - Done when: `test_structured.py` shows 3 PASS and 6 expected FAIL cases, and `structured: true` returns `structured_attempts`.
 
-- [ ] **Stage 6 · Embeddings and retrieval**: [Phase 11 · Lesson 04](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/04-embeddings)
+- [x] **Stage 6 · Embeddings and retrieval**: [Phase 11 · Lesson 04](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/04-embeddings)
   - Applied: chunking with overlap, embeddings through the API, normalized vectors, cosine similarity search.
   - Files: `app/embeddings.py`, `data/knowledge/*.txt`
   - Done when: searching "rate limit" returns the matching chunk first, and a nonsense query scores below `MIN_SCORE`.
@@ -168,21 +168,6 @@ Real findings from building this against free models, and what I did about each.
 | A regex that parsed a score (`\d*?\d`) silently turned `0.85` into `0`.                                                                                          | Tested the regex on realistic inputs in isolation before blaming the model. Fixed pattern: `\d*\.?\d+`. |
 | JSON mode guarantees valid syntax, not the schema you wanted.                                                                                                    | Always validate with Pydantic and retry with the error message.                                         |
 | Free endpoints are rate limited, and some log prompts.                                                                                                           | Concurrency limit on parallel calls, and no private data in prompts or knowledge files.                 |
-
-## Evidence log
-
-Real results kept per stage. Add a row each time a stage's "Done when" check passes.
-
-| Stage | Command or test                         | Result                                                                                    |
-| ----- | --------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 3     | `strategy: cot`, train-and-bus question | Correct answer, ends with a parseable `Final answer:` line, about 2.7 s                   |
-| 4     | `strategy: direct`                      | Correct, about 2.7 s, 1 call                                                              |
-| 4     | `strategy: self_consistency`            | Correct, about 8.9 s, 5 calls, `confidence` 0.8 (vote split by wording, not disagreement) |
-| 4     | `strategy: tree_of_thought` (removed)   | Correct, about 16.9 s, 13 calls, scores unreliable due to the regex bug                   |
-| 5     |                                         |                                                                                           |
-| 6     |                                         |                                                                                           |
-| 7     |                                         |                                                                                           |
-| 8     |                                         |                                                                                           |
 
 ## Credits and license
 

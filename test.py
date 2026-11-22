@@ -1,44 +1,35 @@
-# import re
-# for reply in ["0.85", "0.3", "1.0", "1", ".7"]:
-#     print(reply, "| yours:", re.search(r"\d*?\d+", reply).group(), "| fixed:", re.search(r"\d*\.?\d+", reply).group())
+"""Stage 6 check: does retrieval find the right file, and how low do unrelated scores go?"""
+import asyncio  # embed() and search() are async, so we need an event loop
 
-from app.structured import parse_structured  # the function under test
-import json
-from app.llm_client import LLMError
+from app.embeddings import KnowledgeBase  # the class under test
 
-GOOD = '{"answer":"Train, by 60 minutes","confidence":0.9,"key_points":["12:15","13:15"],"needs_human_review":false}'  # a valid reply
-CASES = {  # name -> raw model text
-    "valid": GOOD,
-    "fenced": f"```json\n{GOOD}\n```",  # code fences should be tolerated
-    "chatty": f"Here is the JSON: {GOOD}",  # a preamble should be tolerated
-    "confidence_7": GOOD.replace("0.9", "7"),  # out of range
-    "missing_field": '{"answer":"x","confidence":0.5,"key_points":[]}',  # needs_human_review is missing
-    "empty_answer": GOOD.replace("Train, by 60 minutes", ""),  # violates min_length
-    "six_points": GOOD.replace('["12:15","13:15"]', '["a","b","c","d","e","f"]'),  # violates max_length
-    "not_json": "I think the train arrives first.",  # no JSON at all
-    "truncated": '{"answer": "Train, by',  # cut off mid-string
-}
+CASES = [  # (query, file that should win, or None for an unrelated question)
+    ("What is the rate limit?", "acme_api.txt"),  # shares keywords with the document
+    ("How many calls can I make per minute?", "acme_api.txt"),  # paraphrase: few shared words
+    ("When does my login token expire?", "acme_api.txt"),  # paraphrase of the JWT sentence
+    ("How do I undo a bad release?", "acme_deployment.txt"),  # paraphrase of the rollback sentence
+    ("What test coverage is required?", "acme_deployment.txt"),  # keyword question
+    ("How long do I have to submit receipts?", "acme_office.txt"),  # paraphrase of the expense rule
+    ("What is the capital of France?", None),  # unrelated: should score low everywhere
+]
 
-EXPECTED_FAILURES = {
-    "confidence_7",
-    "missing_field",
-    "empty_answer",
-    "six_points",
-    "not_json",
-    "truncated",
-}
 
-for name, raw in CASES.items():
-    try:
-        parse_structured(raw)
+async def main():
+    kb = KnowledgeBase()  # an empty knowledge base, built on first search
+    hits, total = 0, 0  # counters for the top-1 hit rate
+    unrelated_max = 0.0  # highest score seen for an unrelated query
+    for query, expected in CASES:  # run every test query
+        results = await kb.search(query, top_k=3)  # top 3 matches
+        print(f"\nQ: {query}")  # show the query
+        for r in results:  # show each match with its score
+            print(f"   {r['score']:.4f}  {r['source']:<22} {r['text'][:60]}...")
+        if expected is None:  # unrelated question: remember how high it scored
+            unrelated_max = max(unrelated_max, results[0]["score"])
+        else:  # related question: did the right file rank first?
+            total += 1
+            hits += results[0]["source"] == expected
+    print(f"\nTop-1 hit rate: {hits}/{total}")  # the number for your evidence log
+    print(f"Highest score for an unrelated query: {unrelated_max:.4f}")  # use this to calibrate MIN_SCORE
 
-        if name in EXPECTED_FAILURES:
-            print(f"FAIL  {name}: Expected an exception")
-        else:
-            print(f"PASS  {name}")
 
-    except Exception as exc:
-        if name in EXPECTED_FAILURES:
-            print(f"PASS  {name}: Correctly rejected")
-        else:
-            print(f"FAIL  {name}: {type(exc).__name__}: {exc}")
+asyncio.run(main())  # run the async function

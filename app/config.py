@@ -36,5 +36,11 @@ class Settings:
     JSON_MODE_SUPPORTED: bool = os.getenv("JSON_MODE_SUPPORTED", "false").lower() == "true"
     STRUCTURED_MAX_RETRIES: INT = 3
 
+    EMBED_QUERY_PREFIX: str = os.getenv("EMBED_QUERY_PREFIX", "")
+    EMBED_DOC_PREFIX: str = os.getenv("EMBED_DOC_PREFIX", "")
+    EMBED_CACHE_PATH: Path = Path(__file__).resolve().parent.parent / ".cache" / "embeddings.json"
+    EMBED_BATCH_SIZE: int = 32
+    MIN_SCORE: float = 0.18
+
 settings = Settings()
 

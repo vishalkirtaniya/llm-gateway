@@ -104,3 +104,13 @@ async def embed(texts: list) -> list:
         raise LLMError(502, f"Embedding error: {data['error']}")
     items = sorted(data["data"], key=lambda item: item["index"])
     return [item["embedding"] for item in items]
+
+async def embed(texts: list) -> list:
+    if not settings.EMBEDDING_MODEL:
+        raise LLMError(500, "EMBEDDING_MODEL is not set. Add it to your .env file")
+    payload = {"model": settings.EMBEDDING_MODEL, "input": texts}
+    data = await _post("/embeddings", payload)
+    if "error" in data:
+        raise LLMError(502, f"Embedding error: {data['error']}")
+    items = sorted(data['data'], key=lambda item: item["index"])
+    return [item["embedding"] for item in items]
