@@ -87,12 +87,16 @@ async def _extend(system: str, problem: str, path: str) -> str:
         f"{problem}\n\n<reasoning_so_far>\n{path or '(nothing yet)'}\n</reasoning_so_far>"
         "Write ONLY the next reasoning step (1-3 sentences). Do not give the final answer yet."
     )
-    text = await _limited_chat(
-            _messages(system, prompt), 
-            temperature=0.9, 
-            max_tokens=300, 
-            reasoning=False
-        )
+    try:
+        text = await _limited_chat(
+                _messages(system, prompt), 
+                temperature=0.9, 
+                max_tokens=300, 
+                reasoning=False
+            )
+    except LLMError as exc:
+        print(f"[extend failed] {exc.message}")
+        return ""
     return text.strip()
 
 async def _score(system: str, problem: str, path: str) -> float:
@@ -105,7 +109,7 @@ async def _score(system: str, problem: str, path: str) -> float:
         text = await _limited_chat(_messages(system, prompt), temperature=0.9, max_tokens=300, reasoning=False)
     except LLMError:
         return 0.0
-    match = re.search(r"\d*?\d", text)
+    match = re.search(r"\d*?\d+", text)
     return max(0.0, min(1.0, float(match.group()))) if match else 0.0
 
 async def solve_tot(system: str, problem: str) -> ReasoningResult:
@@ -114,7 +118,10 @@ async def solve_tot(system: str, problem: str) -> ReasoningResult:
     for _ in range(settings.TOT_DEPTH):
         parents = [p for p in beams for _ in range(settings.TOT_BREADTH)]
         steps = await asyncio.gather(*[_extend(system, problem, p) for p in parents])
-        candidates = [f"{p}\n{s}".strip() for p, s in zip(parents, steps)]
+        pairs = [(p, s) for p, s in zip(parents, steps) if s]
+        if not pairs:
+            break
+        candidates = [f"{p}\n{s}".strip() for p, s in pairs]
         scores = await asyncio.gather(*[_score(system, problem, c) for c in candidates])
         ranked = sorted(zip(scores, candidates), key=lambda pair: pair[0], reverse=True)
         beams = [c for _, c in ranked[:settings.TOT_BEAM]]
