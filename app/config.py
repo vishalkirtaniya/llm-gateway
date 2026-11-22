@@ -33,5 +33,8 @@ class Settings:
 
     KNOWLEDGE_DIR: Path = Path(__file__).resolve().parent.parent / "data" / "knowledge"
 
+    JSON_MODE_SUPPORTED: bool = os.getenv("JSON_MODE_SUPPORTED", "false").lower() == "true"
+    STRUCTURED_MAX_RETRIES: INT = 3
+
 settings = Settings()
 
