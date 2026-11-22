@@ -32,7 +32,7 @@ The service sends a question to an LLM through an OpenAI-compatible API (develop
   - Files: `app/reasoning.py`
   - Done when: every strategy answers the train-and-bus question correctly and `self_consistency` returns a `confidence`.
 
-- [ ] **Stage 5 · Structured outputs** 🚧 _in progress_: [Phase 11 · Lesson 03](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/03-structured-outputs)
+- [x] **Stage 5 · Structured outputs** 🚧 _in progress_: [Phase 11 · Lesson 03](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/03-structured-outputs)
   - Applied: Pydantic schema, `json.loads` plus schema validation, retry loop that feeds the error back to the model, prompt chaining (reason first, format second).
   - Files: `app/structured.py`
   - Done when: `test_structured.py` shows 3 PASS and 6 expected FAIL cases, and `structured: true` returns `structured_attempts`.
