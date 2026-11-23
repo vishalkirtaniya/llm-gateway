@@ -42,12 +42,12 @@ The service sends a question to an LLM through an OpenAI-compatible API (develop
   - Files: `app/embeddings.py`, `data/knowledge/*.txt`
   - Done when: searching "rate limit" returns the matching chunk first, and a nonsense query scores below `MIN_SCORE`.
 
-- [ ] **Stage 7 · Context engineering**: [Phase 11 · Lesson 05](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/05-context-engineering)
+- [x] **Stage 7 · Context engineering**: [Phase 11 · Lesson 05](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/05-context-engineering)
   - Applied: token budget per prompt component, lost-in-the-middle reordering, conversation history compression, per-session memory.
   - Files: `app/context.py`
   - Done when: a unit test shows the best chunk at the start and the second best at the end, and long histories compress.
 
-- [x] **Stage 8 · Wire it together (RAG)**: [Phase 11 · Lesson 06](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/06-rag)
+- [ ] **Stage 8 · Wire it together (RAG)**: [Phase 11 · Lesson 06](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/06-rag)
   - Applied: retrieve, reorder, fit the budget, build the prompt, run the strategy, optionally validate JSON, save the turn.
   - Files: `app/main.py`
   - Done when: a response includes `sources` and `context_budget`, and a follow-up question uses session history.
