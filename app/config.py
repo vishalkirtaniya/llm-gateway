@@ -19,8 +19,14 @@ class Settings:
 
     CONTEXT_WINDOW: int = 128_000
     GENERATION_RESERVE: int = 4_000
+    MAX_SYSTEM_TOKENS: int = 1_000
+    MAX_QUESTION_TOKENS: int = 1_000
+    MAX_CONTEXT_TOKENS: int = 3_000
+    MAX_HISTORY_TOKENS: int = 3_000
+    KEEP_RECENT_TURNS: int = 4
+    MAX_SESSIONS: int = 500
 
-    TOP_K: int = 4 
+    TOP_K: int = 4
     MIN_SCORE: float = 0.30
     CHUNK_WORDS: int = 120
     CHUNK_OVERLAP: int = 20
