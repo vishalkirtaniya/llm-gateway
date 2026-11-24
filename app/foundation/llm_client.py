@@ -4,7 +4,7 @@ from typing import Optional
 
 import httpx
 
-from .config import Settings
+from ..config import Settings
 
 settings = Settings()
 

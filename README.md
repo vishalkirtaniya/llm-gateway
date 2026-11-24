@@ -52,6 +52,39 @@ The service sends a question to an LLM through an OpenAI-compatible API (develop
   - Files: `app/main.py`
   - Done when: a response includes `sources` and `context_budget`, and a follow-up question uses session history.
 
+### Agent track (from scratch, no frameworks)
+
+Seven lessons from Phase 13 (Tools & Protocols) and Phase 14 (Agent Engineering) that turn the gateway from "answers a question" into "takes actions". The core stages are the foundation: prompts, structured output, retrieval, and context management all reappear inside the agent loop.
+
+- [ ] **Stage 9 · The tool interface** 🚧 _next_: [Phase 13 · Lesson 01](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/13-tools-and-protocols/01-the-tool-interface)
+  - Applied: a tool is a name, a description, a JSON Schema, and an executor; the four-step loop (describe, decide, execute, observe); arguments validated before anything runs; pure versus consequential tools; a turn limit as a circuit breaker.
+  - Files: `app/tools.py`, `test_tools.py`
+  - Done when: `test_tools.py` prints "All checks passed" (offline, no LLM).
+- [ ] **Stage 10 · Function calling deep dive**: [Phase 13 · Lesson 02](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/13-tools-and-protocols/02-function-calling-deep-dive)
+  - Applied: replace the fake decider with a real model through the provider's tool-calling API; parse tool calls, run them, send results back. Also worth reading: [Phase 11 · Lesson 09, Function Calling & Tool Use](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/09-function-calling).
+  - Files: `app/llm_client.py` (tools parameter), `app/tools.py`
+  - Done when: the real model calls `add` for "what is 7 plus 35" and answers from the tool result.
+- [ ] **Stage 11 · The agent loop**: [Phase 14 · Lesson 01](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering/01-the-agent-loop)
+  - Applied: a ReAct-style loop on top of the Stage 9 registry, with step limits and stop conditions.
+  - Files: `app/agent.py`
+  - Done when: a new `agent` strategy answers a two-tool question and stops by itself, and the step limit stops a runaway loop.
+- [ ] **Stage 12 · Tool use and function calling**: Phase 14 · Lesson 06 ([Phase 14 folder](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering))
+  - Applied: tool-use patterns beyond the basic loop, such as error recovery, parallel calls, and tool selection. Check the lesson for its exact focus.
+  - Files: `app/tools.py`, `app/agent.py`
+  - Done when: a failing tool produces a recovered answer, and parallel calls are matched back by id.
+- [ ] **Stage 13 · ReWOO and Plan-and-Execute**: Phase 14 · Lesson 02, "Decoupled Planning" ([Phase 14 folder](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering))
+  - Applied: the model writes a full plan with placeholders first, tools fill the placeholders, and a final step writes the answer. Compare it with the Stage 11 loop on call count and tokens, which matters on a rate-limited free tier.
+  - Files: `app/planner.py`
+  - Done when: the same question is answered with fewer LLM calls than the agent loop, with the comparison in the evidence log.
+- [ ] **Stage 14 · Memory: virtual context**: Phase 14 · Lesson 07, "Virtual Context and MemGPT" ([Phase 14 folder](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering))
+  - Applied: the context window as RAM and an external store as disk, with the agent paging between them. Builds on Stage 7 (history compression) and Stage 6 (retrieval).
+  - Files: `app/memory.py`
+  - Done when: a fact stated 30 turns ago is recalled after it has been evicted from the window.
+- [ ] **Stage 15 · Failure modes: why agents break**: Phase 14 · Lesson 26 ([Phase 14 folder](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering))
+  - Applied: reproduce typical failures (runaway loops, invalid tool arguments, injected instructions inside tool results, context overflow) and add a guard for each.
+  - Files: `test_failures.py`
+  - Done when: every failure mode has a test that triggers it and a guard that catches it.
+
 ### Extensions (planned)
 
 - [ ] **Model profiles**: one registry entry per model (token budget, extra payload fields, response parser, text cleaners) so switching models never touches the strategy code.
@@ -142,17 +175,22 @@ Tunable limits (token budgets, retry count, self-consistency samples) live in `a
 ```
 llm-gateway/
 ├── app/
-│   ├── config.py        # settings read from environment variables
-│   ├── llm_client.py    # HTTP client: retries, error mapping, usage tracking
-│   ├── prompts.py       # system prompt, few-shot examples, prompt builder
-│   ├── reasoning.py     # direct, cot, self_consistency strategies
-│   ├── structured.py    # Pydantic schema, validation, retry loop
-│   ├── embeddings.py    # (planned) chunking, embeddings, cosine search
-│   ├── context.py       # (planned) token budget, reordering, history
-│   └── main.py          # the single endpoint
-├── data/knowledge/      # (planned) text files used for retrieval
-├── pyproject.toml       # dependencies, managed by uv
-└── uv.lock              # exact resolved versions
+│   ├── __init__.py
+│   ├── config.py            # settings read from environment variables
+│   ├── main.py              # the single endpoint
+│   ├── foundation/          # Stages 1-8: the LLM building blocks
+│   │   ├── __init__.py
+│   │   ├── llm_client.py    # HTTP client: retries, error mapping, usage tracking
+│   │   ├── prompts.py       # system prompt, few-shot examples, prompt builder
+│   │   ├── reasoning.py     # direct, cot, self_consistency strategies
+│   │   ├── structured.py    # Pydantic schema, validation, retry loop
+│   │   ├── embeddings.py    # chunking, embeddings, cosine search
+│   │   └── context.py       # token budget, reordering, history
+├── data/knowledge/          # text files used for retrieval
+├── test.py
+├── .env                     # API keys and model ids (git-ignored)
+├── pyproject.toml           # dependencies, managed by uv
+└── uv.lock                  # exact resolved versions
 ```
 
 ## What I learned along the way

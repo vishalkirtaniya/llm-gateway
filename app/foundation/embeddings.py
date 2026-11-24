@@ -4,7 +4,7 @@ import json
 from typing import List
 import numpy as np 
 
-from .config import settings
+from ..config import settings
 from .llm_client import LLMError, embed
 
 def chunk_text(text: str, size: int, overlap: int) -> List[str]:

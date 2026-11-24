@@ -4,10 +4,10 @@ from fastapi import FastAPI, HTTPException # for web framework and HTTP error ty
 from pydantic import BaseModel, Field # for request and response schemas
 
 from .config import Settings
-from .llm_client import LLMError, start_usage_tracking, chat
-from .prompts import SYSTEM_PROMPT, build_user_prompt
-from .reasoning import choose_strategy, run_strategy
-from .structured import StructuredAnswer, extract_structured
+from .foundations.llm_client import LLMError, start_usage_tracking, chat
+from .foundations.prompts import SYSTEM_PROMPT, build_user_prompt
+from .foundations.reasoning import choose_strategy, run_strategy
+from .foundations.structured import StructuredAnswer, extract_structured
 
 app = FastAPI(title="LLM Gateway", version="1.0.0")
 

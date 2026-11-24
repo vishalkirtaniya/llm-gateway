@@ -2,7 +2,7 @@ import re
 from collections import OrderedDict
 from typing import List, Optional, Tuple
 
-from .config import settings
+from ..config import settings
 
 def count_tokens(text: str) -> int:
     if not text:

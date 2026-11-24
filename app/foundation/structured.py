@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 from pydantic import BaseModel, Field, ValidationError
 
-from .config import settings
+from ..config import settings
 from .llm_client import chat
 
 class StructuredAnswer(BaseModel):
