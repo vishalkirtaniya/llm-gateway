@@ -48,5 +48,8 @@ class Settings:
     EMBED_BATCH_SIZE: int = 32
     MIN_SCORE: float = 0.18
 
+    MAX_TOOL_TURNS: int = 5
+    MAX_TOOL_RESULT_CHARS: int = 4000
+
 settings = Settings()
 
