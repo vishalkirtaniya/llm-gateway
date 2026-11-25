@@ -4,15 +4,13 @@ import re  # the fake decider pulls numbers out of the message
 import tempfile  # a throwaway folder for the note-saving test
 from pathlib import Path
 
-from app.config import settings
-from app.agents.tools import (  # the pieces under test
+from ..app.config import settings
+from ..app.agents.tools import (  # the pieces under test
     Tool, ToolCall, ToolRegistry, build_default_registry, execute_call, run_loop, validate,
 )
 
-
 def run(coro):  # run an async function from plain code
     return asyncio.run(coro)
-
 
 class FakeKB:  # stands in for the Stage 6 knowledge base, so no embeddings API is needed
     async def search(self, query, top_k=3):

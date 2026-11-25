@@ -60,7 +60,7 @@ Seven lessons from Phase 13 (Tools & Protocols) and Phase 14 (Agent Engineering)
   - Applied: a tool is a name, a description, a JSON Schema, and an executor; the four-step loop (describe, decide, execute, observe); arguments validated before anything runs; pure versus consequential tools; a turn limit as a circuit breaker.
   - Files: `app/tools.py`, `test_tools.py`
   - Done when: `test_tools.py` prints "All checks passed" (offline, no LLM).
-- [ ] **Stage 10 · Function calling deep dive**: [Phase 13 · Lesson 02](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/13-tools-and-protocols/02-function-calling-deep-dive)
+- [x] **Stage 10 · Function calling deep dive**: [Phase 13 · Lesson 02](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/13-tools-and-protocols/02-function-calling-deep-dive)
   - Applied: replace the fake decider with a real model through the provider's tool-calling API; parse tool calls, run them, send results back. Also worth reading: [Phase 11 · Lesson 09, Function Calling & Tool Use](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/09-function-calling).
   - Files: `app/llm_client.py` (tools parameter), `app/tools.py`
   - Done when: the real model calls `add` for "what is 7 plus 35" and answers from the tool result.
@@ -187,7 +187,9 @@ llm-gateway/
 │   │   ├── embeddings.py    # chunking, embeddings, cosine search
 │   │   └── context.py       # token budget, reordering, history
 ├── data/knowledge/          # text files used for retrieval
-├── test.py
+├── tests/
+│   ├── test_tools.py
+│   ├── test_agents.py
 ├── .env                     # API keys and model ids (git-ignored)
 ├── pyproject.toml           # dependencies, managed by uv
 └── uv.lock                  # exact resolved versions

@@ -51,5 +51,9 @@ class Settings:
     MAX_TOOL_TURNS: int = 5
     MAX_TOOL_RESULT_CHARS: int = 4000
 
+    AGENT_MAX_TURNS: int = 12
+    AGENT_MAX_TOKENS: int = 8000
+    AGENT_MAX_CALLS_PER_TURN: int = 4
+
 settings = Settings()
 
