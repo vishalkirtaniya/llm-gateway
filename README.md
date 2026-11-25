@@ -56,7 +56,7 @@ The service sends a question to an LLM through an OpenAI-compatible API (develop
 
 Seven lessons from Phase 13 (Tools & Protocols) and Phase 14 (Agent Engineering) that turn the gateway from "answers a question" into "takes actions". The core stages are the foundation: prompts, structured output, retrieval, and context management all reappear inside the agent loop.
 
-- [ ] **Stage 9 · The tool interface** 🚧 _next_: [Phase 13 · Lesson 01](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/13-tools-and-protocols/01-the-tool-interface)
+- [x] **Stage 9 · The tool interface** 🚧 _next_: [Phase 13 · Lesson 01](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/13-tools-and-protocols/01-the-tool-interface)
   - Applied: a tool is a name, a description, a JSON Schema, and an executor; the four-step loop (describe, decide, execute, observe); arguments validated before anything runs; pure versus consequential tools; a turn limit as a circuit breaker.
   - Files: `app/tools.py`, `test_tools.py`
   - Done when: `test_tools.py` prints "All checks passed" (offline, no LLM).
