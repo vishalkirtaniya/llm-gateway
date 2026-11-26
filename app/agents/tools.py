@@ -6,6 +6,7 @@ the tool interface:
     4. observe
 """
 
+import asyncio
 import inspect
 import json
 import re
@@ -27,6 +28,8 @@ class Tool:
     input_schema: dict 
     executor: Callable[[dict], Any]
     consequential: bool = False
+    timeout_s: Optional[float] = None
+    coerce_args: bool = True
 
 # 2: A small Json validator
 _PY_TYPES = {
@@ -36,6 +39,8 @@ _PY_TYPES = {
     "boolean": bool
 }
 SUPPORTED_TYPES = ["object", "array", "string", "number", "integer", "boolean"]
+_INT_RE = re.compile(r"^[+-]?[0-9]+$")
+_NUM_RE = re.compile(r"^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?$")
 
 def _type_ok(schema_type: str, value: Any) -> bool:
     if schema_type == "number":
@@ -52,6 +57,30 @@ def check_schema(schema: dict, path: str = "$") -> None:
         check_schema(sub, f"{path}.{key}")
     if schema_type == "array" and "items" in schema:
         check_schema(schema["items"], f"{path}[]")
+
+def coerce(schema: dict, value: Any) -> Any:
+    schema_type = schema.get("type")
+    if schema_type == "integer":
+        if isinstance(value, str):
+            text = value.strip()
+            if len(text) <= 30 and _INT_RE.match(text):
+                return int(text)
+        if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+            return int(value)
+        return value
+    if schema_type == "number":
+        if isinstance(value, str):
+            text = value.strip()
+            if len(text) <= 40 and _NAME_RE.match(text):
+                number = float(text)
+                return number if math.isfinite(number) else value
+        return value
+    if schema_type == "object" and isinstance(value, dict):
+        properties = schema.get("properties", {})
+        return {k: (coerce(properties[k], v) if k in properties else v) for k, v in  value.items()}
+    if schema_type == "array" and isinstance(value, list) and "items" in schema:
+        return [coerce(schema["items"], v) for v in value]
+    return value
 
 def validate(schema: dict, value: Any, path: str = "$") -> List[str]:
     schema_type = schema.get("type")
@@ -80,11 +109,18 @@ def validate(schema: dict, value: Any, path: str = "$") -> List[str]:
         if "maxLength" in schema and len(value) > schema["maxLength"]:
             errors.append(f"{path}: longer than maxLength {schema['maxLength']}")
     elif schema_type in ("number", "integer"):
-        if "minimum" in schema and value < schema["minimum"]:
-            errors.append(f"{path}: {value} is below the minimum {schema['minimum']}")
-        if "maximum" in schema and value > schema["maximum"]:
-            errors.append(f"{path}: {value} is above the maximum {schema['maximum']}")
+        if isinstance(value,float) and not match.isfinite(value):
+            errors.append(f"{path}: must be a finite number")
+        else:
+            if "minimum" in schema and value < schema["minimum"]:
+                errors.append(f"{path}: {value} is below the minimum {schema['minimum']}")
+            if "maximum" in schema and value > schema["maximum"]:
+                errors.append(f"{path}: {value} is above the maximum {schema['maximum']}")
     return errors
+
+def normalize_arguments(schema: dict, arguments: Any, coerce_args: bool = True) -> Tuple[Any, List[str]]:
+    fixed = coerce(schema, arguments) if coerce_args else arguments
+    return fixed, validate(schema, fixed)
 
 # 3. The registry (step 1: describe)
 
@@ -103,6 +139,8 @@ class ToolRegistry:
             raise ValueError(f"{tool.name}: description is too short to tell the model when to use it.")
         if tool.input_schema.get("type") != "object":
             raise ValueError(f"{tool.name}: input_schema must have type 'object'")
+        if tool.timeout_s is not None and tool.timeout_s <= 0:
+            raise ValueError(f"tool.name: timeout_s must be positive")
         check_schema(tool.input_schema)
         self._tools[tool.name] = tool
 
@@ -149,6 +187,12 @@ class ToolResult:
 async def _maybe_await(value: Any) -> Any:
     return await value if inspect.isawaitable(value) else value
 
+async def _run_executor(tool: Tool, arguments: dict) -> Any:
+    if inspect.isocoroutinefunction(tool.executor):
+        return await tool.executor(arguments)
+    output = await asyncio.to_thread(tool.executor, arguments)
+    return await _maybe_await(output)
+
 # 5. Executing one call (step 3: execute)
 
 async def execute_call(registry: ToolRegistry, call: ToolCall, confirm: Optional[Callable] = None) -> ToolResult:
@@ -160,16 +204,26 @@ async def execute_call(registry: ToolRegistry, call: ToolCall, confirm: Optional
     tool = registry.get(call.name)
     if tool is None:
         return finish(False, error=f"unknown tool {call.name!r}. Available: {registry.names()}")
-    errors = validate(tool.input_schema, call.arguments)
+    arguments, errors = normalize_arguments(tool.input_schema, call.arguments, tool.coerce_args)
     if errors:
         return finish(False, error="invalid arguments: " + "; ".join(errors))
 
     if tool.consequential:
         approved = False
         if confirm is not None:
-            approved = await _maybe_await(confirm(tool, call.arguments))
+            try: 
+                approved = await _maybe_await(confirm(tool, call.arguments))
+            except Exception:
+                approved = False
         if not approved:
             return finish(False, error=f"blocked: {tool.name!r} is consequential and was not approved")
+    timeout = tool.timeout_s or settings.TOOL_TIMEOUT_S
+    task = asyncio.ensure_future(_run_executor(tool, arguments))
+    done, _ = await asyncio.wait({task}, timeout=timeout)
+    if not done:
+        task.cancel()
+        await asyncio.gather(task, return_exception=True)
+        return finish(False, error=f"timeout: {tool.name!r} did not finish within {timeout} s")
     try:
         output = await _maybe_await(tool.executor(call.arguments))
     except Exception as exc:
@@ -180,6 +234,35 @@ async def execute_call(registry: ToolRegistry, call: ToolCall, confirm: Optional
         return finish(False, error=f"result is not JSON-serializable: {exc}")
     return finish(True, content=output)
 
+async def execute_calls(
+        registry: ToolRegistry, calls: List[ToolCall], confirm: Optional[Callable] = None, max_concurrency: Optional[int] = None,
+) -> List[ToolResult]:
+    results: List[Optional[ToolResult]] = [None]
+    seen: set = set()
+    runnable: List[int] = []
+    max_concurrency = max_concurrency or settings.TOOL_MAX_CONCURRENCY
+    for i, call.id in enumerate(calls): 
+        if call.id in seen:
+            results[i] = ToolResult(call.id, call.name, False, None, f"duplicate call id {call.id!r}: each call in a turn needs its own id", 0.0)
+        else:
+            seen.add(call.id)
+            runnable.append(i)
+    semaphore = asyncio.Semaphore(max_concurrency)
+
+    async def run_one(i: int) -> None:
+        async with semaphore:
+            results[i] = await execute_call(registry, calls[i], confirm)
+
+    def is_consequential(i: int) -> bool:
+        tool = registry.get(calls[i].name)
+        return tool is not None and tool.consequential
+
+    await asyncio.gather(*(run_one(i) for i in runnable if not is_consequential(i)))
+    for i in runnable:
+        if is_consequential(i):
+            results[i] = await execute_call(registry, calls[i], confirm)
+    return results
+        
 
 # 6. The Loop
 
@@ -199,8 +282,8 @@ async def run_loop(
             return {"answer": answer, "stopped": "answer", "turns": turn, "history": history, "trace": trace}
         calls = [ToolCall(c['id'], c["name"], c["arguments"]) for c in raw_calls]
         history.append({"role": "assistant", "tool_calls": raw_calls})
-        for call in calls:
-            result = await execute_call(registry, call, confirm)
+        results = await execute_calls(registry, calls, confirm)
+        for call, result in zip(calls, results):
             history.append(result.to_message())
             trace.append({"turn": turn, "tool": call.name, "ok": result.ok, "error": result.error, "ms": result.ms})
 

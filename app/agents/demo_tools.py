@@ -1,6 +1,7 @@
 import ast 
 import operator
 from typing import Dict
+from pathlib import Path 
 
 from .tools import Tool, ToolRegistry
 
@@ -84,3 +85,41 @@ def build_demo_registry() -> ToolRegistry:
         executor=kv.get,
     ))
     return registry
+
+def build_lesson_registry() -> ToolRegistry:
+    registry = ToolRegistry()
+    int_pair = {
+        "type": "object", 
+        "properties": {
+            "a": {"type": "integer"},
+            "b": {"type": "integer"},
+        },
+        "required": ["a", "b"]
+    }
+    registry.register(Tool("add", "Add two integers a and b. Use for any integer addition. ", int_pair, lambda args: {"sum": args['a'] + args['b']}))
+    registry.register(Tool("multiply", "Multiple two integers a and b. Prefer multiplication over looped addition.", int_pair, lambda args: {"product": args['a'] * args['b']}))
+    registry.register(Tool("classify", "Classify a status as one of the allowed labels.", {"type": "object", "properties": {"status": {"type": "string", "enum": ["open", "closed", "pending"]}}, "required": ["status"]}, lambda args: {"classified_as": args["status"]}))
+    return registry
+
+
+def register_document_tools(registry: ToolRegistry, root: Path, max_chars: int = 2000) -> None:
+    base = root.resolve()  # the only folder these tools may ever read from
+
+    def _list(args: dict) -> dict:  # names of the text files in the folder
+        return {"documents": sorted(p.name for p in base.glob("*.txt"))}
+
+    def _read(args: dict) -> dict:  # read one text file, safely
+        target = (base / args["name"]).resolve()  # resolve() collapses ".." and follows symlinks
+        if not target.is_relative_to(base) or target.suffix != ".txt" or not target.is_file():
+            raise ValueError("document not found")  # ONE message for every failure: do not reveal which paths exist
+        text = target.read_text(encoding="utf-8")
+        return {"name": target.name, "text": text[:max_chars], "truncated": len(text) > max_chars}
+
+    registry.register(Tool(
+        "list_documents", "Use to see which knowledge documents exist. Do not use to search inside them.",
+        {"type": "object", "properties": {}, "required": []}, _list,
+    ))
+    registry.register(Tool(
+        "read_document", "Use to read the full text of one knowledge document by its file name from list_documents.",
+        {"type": "object", "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 100}}, "required": ["name"]}, _read,
+    ))

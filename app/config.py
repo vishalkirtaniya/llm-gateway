@@ -55,5 +55,8 @@ class Settings:
     AGENT_MAX_TOKENS: int = 8000
     AGENT_MAX_CALLS_PER_TURN: int = 4
 
+    TOOL_TIMEOUT_S: float = 10.0
+    TOOL_MAX_CONCURRENCY: int = 4
+
 settings = Settings()
 

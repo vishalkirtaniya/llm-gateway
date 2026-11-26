@@ -5,7 +5,7 @@ from typing import Any, Callable, List, Optional
 
 from ..config import settings
 from ..foundation.context import count_tokens
-from .tools import Tool, ToolCall, ToolRegistry, ToolResult, execute_call
+from .tools import Tool, ToolCall, ToolRegistry, ToolResult, execute_call, execute_calls
 
 # 1. The explicit finish tools
 
@@ -69,6 +69,7 @@ class AgentLoop:
         max_tokens: Optional[int] = None,
         max_calls_per_turn: Optional[int] = None,
         require_finish: bool = False,
+        parallel: bool = False,
     ):
         self.registry = with_finish_tool(registry)
         self.decide = decide
@@ -77,6 +78,34 @@ class AgentLoop:
         self.max_tokens = max_tokens or settings.AGENT_MAX_TOKENS
         self.max_calls_per_turn = max_calls_per_turn or settings.AGENT_MAX_CALLS_PER_TURN
         self.require_finish = require_finish
+        self.parallel = parallel
+
+    async def _run_calls(self, calls: List[ToolCall]) -> List[ToolResult]:
+        cap = self.max_calls_per_turn
+        if not self.parallel:
+            results: List[ToolResult] = []
+            finished = False
+            for index, call in enumerate(calls):
+                if finished:
+                    result = _skipped(call, "skipped: the run already finished")
+                elif index >= cap:
+                    result = _skipped(call, f"skipped: at most {cap} tool calls are allowed per turn")
+                else:
+                    result = await execute_call(self.registry, call, self.confirm)
+                results.append(result)
+                if call.name == "finish" and result.ok:
+                    finished = True
+            return results
+        finish_index = next((i for i, c in enumerate(calls) if c.name == "finish"), None)
+        last = len(calls) if finish_index is None else finish_index + 1
+        runnable = calls[: min(last, cap)]
+        results = list(await execute_calls(self.registry, runnable, self.confirm))
+        for index in range(len(runnable), len(calls)):
+            if index >= last:
+                results.append(_skipped(calls[index], "skipped: calls after finish in the same turn are not run"))
+            else:
+                result.append(_skipped(calls[index], f"skipped: at most {cap} tool calls are allowed per turn"))
+        return results
 
     async def run(self, user_message: str) -> AgentResult:
         history: List[dict] = [{"role": "user", "content": user_message}]
@@ -98,21 +127,17 @@ class AgentLoop:
                 if not self.require_finish:
                     return end(text, "answer", turn)
                 history.append({"role": "user", "content": "Reminder: deliver your final answer by calling the finish tool."})
+                completed += 1
                 continue
             history.append({"role": "assistant", "tool_calls": raw_calls})
+            calls = [
+                ToolCall(raw.get("id", f"call_{turn}_{index}"), raw.get("name", ""), raw.get("arguments", {}))
+                for index, raw in enumerate(raw_calls)
+            ]
+            results = await self._run_calls(calls)
             final_answer: Optional[str] = None
-            for index, raw in enumerate(raw_calls):
-                call = ToolCall(
-                    raw.get("id", f"call_{turn}_{index}"), raw.get("name", ""), raw.get("arguments", {})
-                )
-                if final_answer is not None:
-                    result = _skipped(call, "skipped: the run already finished")
-                elif index >= self.max_calls_per_turn:
-                    result = _skipped(call, f"skipped: at most {self.max_calls_per_turn} tool calls are allowed per turn")
-                else:
-                    result = await execute_call(self.registry, call, self.confirm)
+            for call, result in zip(calls, results):
                 message = result.to_message()
-                history.append(message)
                 steps.append(AgentStep(turn, thought, call.name, call.arguments, result.ok, message["content"], result.ms))
                 if call.name == "finish" and result.ok:
                     final_answer = call.arguments["answer"]

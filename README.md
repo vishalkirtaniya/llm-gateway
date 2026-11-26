@@ -68,7 +68,7 @@ Seven lessons from Phase 13 (Tools & Protocols) and Phase 14 (Agent Engineering)
   - Applied: a ReAct-style loop on top of the Stage 9 registry, with step limits and stop conditions.
   - Files: `app/agent.py`
   - Done when: a new `agent` strategy answers a two-tool question and stops by itself, and the step limit stops a runaway loop.
-- [ ] **Stage 12 · Tool use and function calling**: Phase 14 · Lesson 06 ([Phase 14 folder](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering))
+- [x] **Stage 12 · Tool use and function calling**: Phase 14 · Lesson 06 ([Phase 14 folder](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering))
   - Applied: tool-use patterns beyond the basic loop, such as error recovery, parallel calls, and tool selection. Check the lesson for its exact focus.
   - Files: `app/tools.py`, `app/agent.py`
   - Done when: a failing tool produces a recovered answer, and parallel calls are matched back by id.
