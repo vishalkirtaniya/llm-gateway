@@ -64,7 +64,7 @@ Seven lessons from Phase 13 (Tools & Protocols) and Phase 14 (Agent Engineering)
   - Applied: replace the fake decider with a real model through the provider's tool-calling API; parse tool calls, run them, send results back. Also worth reading: [Phase 11 · Lesson 09, Function Calling & Tool Use](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/11-llm-engineering/09-function-calling).
   - Files: `app/llm_client.py` (tools parameter), `app/tools.py`
   - Done when: the real model calls `add` for "what is 7 plus 35" and answers from the tool result.
-- [ ] **Stage 11 · The agent loop**: [Phase 14 · Lesson 01](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering/01-the-agent-loop)
+- [x] **Stage 11 · The agent loop**: [Phase 14 · Lesson 01](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering/01-the-agent-loop)
   - Applied: a ReAct-style loop on top of the Stage 9 registry, with step limits and stop conditions.
   - Files: `app/agent.py`
   - Done when: a new `agent` strategy answers a two-tool question and stops by itself, and the step limit stops a runaway loop.
