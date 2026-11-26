@@ -45,7 +45,9 @@ class AgentResult:
 def history_tokens(history: List[dict]) -> int:
     total = 0
     for message in history:
-        total += count_tokens(message.get("content") or "")
+        text = message.get("content") # tool_call messages have no text
+        if text: # only count real text, so count_tokens is never called with an empty string
+            total += count_tokens(text)
         if message.get("tool_calls"):
             total += count_tokens(json.dumps(message["tool_calls"]))
     return total
@@ -79,13 +81,14 @@ class AgentLoop:
     async def run(self, user_message: str) -> AgentResult:
         history: List[dict] = [{"role": "user", "content": user_message}]
         steps: List[AgentStep] = []
+        completed = 0 # turns that finished without ending the run
 
         def end(answer: Optional[str], reason: str, turns: int) -> AgentResult:
             return AgentResult(answer, reason, turns, history, steps, history_tokens(history))
 
         for turn in range(1, self.max_turns + 1):
             if history_tokens(history) > self.max_tokens:
-                return end(None, "token_budget", turn - 1)
+                return end(None, "token_budget", completed)
             decision = await maybe_await(self.decide(history, self.registry.describe()))
             thought = decision.get("thought", "")
             raw_calls = decision.get("tool_calls") or []
@@ -115,7 +118,8 @@ class AgentLoop:
                     final_answer = call.arguments["answer"]
             if final_answer is not None:
                 return end(final_answer, "finish", turn)
-        return end(None, "max_turns", self.max_turns)
+            completed += 1
+        return end(None, "max_turns", completed)
 
 def pretty_trace(result: AgentResult) -> None:
     for step in result.steps:
@@ -124,3 +128,4 @@ def pretty_trace(result: AgentResult) -> None:
         print(f"    observe: [{'ok' if step.ok else 'ERROR'}] {step.observation} ({step.ms} ms)")
     print(f"stopped: {result.stop_reason} after {result.turns} turn(s), about {result.tokens_used} tokens")
     print(f"answer: {result.answer}")
+

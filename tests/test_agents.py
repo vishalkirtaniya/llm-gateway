@@ -121,3 +121,20 @@ assert result.stop_reason == "token_budget" and result.turns == 0 and decider.cu
 print("PASS token budget")
 
 print("\nAll checks passed")
+
+# 11. the demo calculator evaluates arithmetic and refuses everything else
+from app.agents.tools import ToolCall, execute_call
+from app.agents.demo_tools import build_demo_registry
+demo = build_demo_registry()
+ok = run(
+    execute_call(
+        demo,
+        ToolCall("a", "calculator", {"expr": "120 * 0.15"})
+    )
+)
+assert ok.ok and abs(ok.content["result"] - 18.0) < 1e-9
+for bad in ("__import__('os').getcwd()", "9**9**9", "1/0", "2 +"):
+    r = run(execute_call(demo, ToolCall("b", "calculator", {"expr": bad})))
+    assert not r.ok, f"accepted {bad!r}"
+print("PASS safe calculator")
+
