@@ -72,7 +72,7 @@ Seven lessons from Phase 13 (Tools & Protocols) and Phase 14 (Agent Engineering)
   - Applied: tool-use patterns beyond the basic loop, such as error recovery, parallel calls, and tool selection. Check the lesson for its exact focus.
   - Files: `app/tools.py`, `app/agent.py`
   - Done when: a failing tool produces a recovered answer, and parallel calls are matched back by id.
-- [ ] **Stage 13 · ReWOO and Plan-and-Execute**: Phase 14 · Lesson 02, "Decoupled Planning" ([Phase 14 folder](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering))
+- [x] **Stage 13 · ReWOO and Plan-and-Execute**: Phase 14 · Lesson 02, "Decoupled Planning" ([Phase 14 folder](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering))
   - Applied: the model writes a full plan with placeholders first, tools fill the placeholders, and a final step writes the answer. Compare it with the Stage 11 loop on call count and tokens, which matters on a rate-limited free tier.
   - Files: `app/planner.py`
   - Done when: the same question is answered with fewer LLM calls than the agent loop, with the comparison in the evidence log.

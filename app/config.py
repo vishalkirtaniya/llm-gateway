@@ -65,5 +65,9 @@ class Settings:
     TOOL_TIMEOUT_S: float = 10.0
     TOOL_MAX_CONCURRENCY: int = 4
 
+    REWOO_MAX_STEPS: int = 8
+    REWOO_MAX_REPLANS: int = 1
+    REWOO_MAX_EVIDENCE_CHARS: int = 6000
+
 
 settings = Settings()
