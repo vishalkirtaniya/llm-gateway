@@ -129,7 +129,7 @@ class AgentLoop:
                     )
                 )
             else:
-                result.append(
+                results.append(
                     _skipped(
                         calls[index],
                         f"skipped: at most {cap} tool calls are allowed per turn",
@@ -179,6 +179,7 @@ class AgentLoop:
             final_answer: Optional[str] = None
             for call, result in zip(calls, results):
                 message = result.to_message()
+                history.append(message)
                 steps.append(
                     AgentStep(
                         turn,

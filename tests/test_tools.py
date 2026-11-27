@@ -4,9 +4,12 @@ import asyncio  # the loop and the executors are async
 import re  # the fake decider pulls numbers out of the message
 import tempfile  # a throwaway folder for the note-saving test
 from pathlib import Path
+import sys
 
-from ..app.config import settings
-from ..app.agents.tools import (  # the pieces under test
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.config import settings
+from app.agents.tools import (  # the pieces under test
     Tool,
     ToolCall,
     ToolRegistry,
@@ -15,6 +18,30 @@ from ..app.agents.tools import (  # the pieces under test
     run_loop,
     validate,
 )
+
+
+def run(
+    coro,
+):  # run an async function from plain code (must come BEFORE any test that calls it)
+    return asyncio.run(coro)
+
+
+# every tool call must run exactly once
+counter = {"n": 0}
+
+
+def count(args):
+    counter["n"] += 1  # a side effect we can count
+    return {"n": counter["n"]}
+
+
+once = ToolRegistry()
+once.register(
+    Tool("count", "Counts how many times it was called.", {"type": "object"}, count)
+)
+r = run(execute_call(once, ToolCall("1", "count", {})))
+assert r.ok and counter["n"] == 1, f"tool ran {counter['n']} times"
+print("PASS runs exactly once")
 
 
 def run(coro):  # run an async function from plain code

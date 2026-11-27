@@ -1,43 +1,5 @@
-import ast
-import operator
-from typing import Dict
-from pathlib import Path
-
-from .tools import Tool, ToolRegistry
-
-_BINARY = {
-    ast.Add: operator.add,
-    ast.Sub: operator.sub,
-    ast.Mult: operator.mul,
-    ast.Div: operator.truediv,
-}
-_UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
-
-
-def _eval_node(node: ast.AST) -> float:
-    if isinstance(node, ast.Expression):
-        return _eval_node(node.body)
-    if (
-        isinstance(node, ast.Constant)
-        and isinstance(node.value, (int, float))
-        and not isinstance(node.value, bool)
-    ):
-        return node.value
-    if isinstance(node, ast.BinOp) and type(node.op) in _BINARY:
-        return _BINARY[type(node.op)](_eval_node(node.operand))
-    raise ValueError(
-        "unsupported expression: only numbers, + - + / and parenthese are allowed"
-    )
-
-
-def calculator(args: dict) -> dict:
-    expr = args["expr"]
-    if len(expr) > 100:
-        raise ValueError("expression is too long (100 characters max)")
-    return {"result": _eval_node(ast.parse(expr, mode="eval"))}
-
-
 """Demo tools for the Stage 11 agent loop: a safe calculator and a tiny key-value store."""
+
 import ast  # parses expressions without running them
 import operator  # the arithmetic functions we allow
 from typing import Dict

@@ -4,6 +4,9 @@ import asyncio  # everything here is async
 import tempfile  # throwaway folders
 import time  # a blocking tool for the timeout test
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.agents.agent import AgentLoop
 from app.agents.demo_tools import build_lesson_registry, register_document_tools
@@ -22,11 +25,11 @@ def run(coro):  # run an async function from plain code
     return asyncio.run(coro)
 
 
-def call(cid, name, **arguments):  # a ToolCall
+def call(cid, name, /, **arguments):  # a ToolCall
     return ToolCall(cid, name, arguments)
 
 
-def raw(cid, name, **arguments):  # a call in the dict shape a model produces
+def raw(cid, name, /, **arguments):  # a call in the dict shape a model produces
     return {"id": cid, "name": name, "arguments": arguments}
 
 
