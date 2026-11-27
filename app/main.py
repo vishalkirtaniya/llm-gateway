@@ -1,7 +1,7 @@
 from typing import List, Literal, Optional
 
-from fastapi import FastAPI, HTTPException # for web framework and HTTP error type
-from pydantic import BaseModel, Field # for request and response schemas
+from fastapi import FastAPI, HTTPException  # for web framework and HTTP error type
+from pydantic import BaseModel, Field  # for request and response schemas
 
 from .config import Settings
 from .foundation.llm_client import LLMError, start_usage_tracking, chat
@@ -13,12 +13,16 @@ app = FastAPI(title="LLM Gateway", version="1.0.0")
 
 settings = Settings()
 
-class AskRequest(BaseModel): # client sends
+
+class AskRequest(BaseModel):  # client sends
     question: str = Field(min_length=1, max_length=4000)
-    strategy: Literal["auto", "direct", "cot", "self_consistency", "tree_of_thought"] = "auto"
+    strategy: Literal[
+        "auto", "direct", "cot", "self_consistency", "tree_of_thought"
+    ] = "auto"
     structured: bool = False
 
-class AskResponse(BaseModel): # what we send back
+
+class AskResponse(BaseModel):  # what we send back
     answer: str
     strategy_used: str
     confidence: Optional[float] = None
@@ -27,6 +31,7 @@ class AskResponse(BaseModel): # what we send back
     structured: Optional[StructuredAnswer] = None
     structured_attempts: Optional[int] = None
     warnings: list[str] = Field(default_factory=list)
+
 
 @app.post("/v1/ask", response_model=AskResponse)
 async def ask(req: AskRequest) -> AskResponse:
@@ -44,7 +49,9 @@ async def ask(req: AskRequest) -> AskResponse:
         warnings: list[str] = []
         if req.structured:
             try:
-                structured_obj, attempts = await extract_structured(req.question, result.final_answer)
+                structured_obj, attempts = await extract_structured(
+                    req.question, result.final_answer
+                )
             except (ValueError, LLMError) as exc:
                 warnings.append(str(exc))
 
@@ -53,12 +60,12 @@ async def ask(req: AskRequest) -> AskResponse:
         raise HTTPException(status_code=status, detail=exc.message)
 
     return AskResponse(
-            answer=result.final_answer,
-            strategy_used=result.strategy,
-            confidence=result.confidence,
-            reasoning=result.full_text,
-            details=result.details,
-            structured=structured_obj,
-            structured_attempts=attempts,
-            warnings=warnings,
-        )
+        answer=result.final_answer,
+        strategy_used=result.strategy,
+        confidence=result.confidence,
+        reasoning=result.full_text,
+        details=result.details,
+        structured=structured_obj,
+        structured_attempts=attempts,
+        warnings=warnings,
+    )

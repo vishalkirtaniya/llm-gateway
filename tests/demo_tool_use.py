@@ -1,4 +1,5 @@
 """The lesson's five-call batch, run through our dispatcher."""
+
 import asyncio
 
 from app.agents.demo_tools import build_lesson_registry

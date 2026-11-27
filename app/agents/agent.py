@@ -12,26 +12,34 @@ from .tools import Tool, ToolCall, ToolRegistry, ToolResult, execute_call, execu
 FINISH_TOOL = Tool(
     name="finish",
     description="Use when you have the complete final answer for the user. Call it exactly once, with that answer.",
-    input_schema={"type": "object", "properties": {"answer": {"type": "string", "minLength": 1}}, "required": ["answer"]},
+    input_schema={
+        "type": "object",
+        "properties": {"answer": {"type": "string", "minLength": 1}},
+        "required": ["answer"],
+    },
     executor=lambda args: {"received": True},
 )
+
 
 def with_finish_tool(registry: ToolRegistry) -> ToolRegistry:
     if registry.get("finish") is None:
         registry.register(FINISH_TOOL)
     return registry
 
+
 # 2. Records
+
 
 @dataclass
 class AgentStep:
-    turn: int 
-    thought: str 
-    tool: str 
+    turn: int
+    thought: str
+    tool: str
     arguments: dict
     ok: bool
     observation: str
     ms: float
+
 
 @dataclass
 class AgentResult:
@@ -42,21 +50,27 @@ class AgentResult:
     steps: List[AgentStep] = field(default_factory=list)
     tokens_used: int = 0
 
+
 def history_tokens(history: List[dict]) -> int:
     total = 0
     for message in history:
-        text = message.get("content") # tool_call messages have no text
-        if text: # only count real text, so count_tokens is never called with an empty string
+        text = message.get("content")  # tool_call messages have no text
+        if (
+            text
+        ):  # only count real text, so count_tokens is never called with an empty string
             total += count_tokens(text)
         if message.get("tool_calls"):
             total += count_tokens(json.dumps(message["tool_calls"]))
     return total
 
+
 async def maybe_await(value: Any) -> Any:
     return await value if inspect.isawaitable(value) else value
 
+
 def _skipped(call: ToolCall, reason: str) -> ToolResult:
     return ToolResult(call.id, call.name, False, None, reason, 0.0)
+
 
 # 3. The loop
 class AgentLoop:
@@ -76,7 +90,9 @@ class AgentLoop:
         self.confirm = confirm
         self.max_turns = max_turns or settings.AGENT_MAX_TURNS
         self.max_tokens = max_tokens or settings.AGENT_MAX_TOKENS
-        self.max_calls_per_turn = max_calls_per_turn or settings.AGENT_MAX_CALLS_PER_TURN
+        self.max_calls_per_turn = (
+            max_calls_per_turn or settings.AGENT_MAX_CALLS_PER_TURN
+        )
         self.require_finish = require_finish
         self.parallel = parallel
 
@@ -89,31 +105,47 @@ class AgentLoop:
                 if finished:
                     result = _skipped(call, "skipped: the run already finished")
                 elif index >= cap:
-                    result = _skipped(call, f"skipped: at most {cap} tool calls are allowed per turn")
+                    result = _skipped(
+                        call, f"skipped: at most {cap} tool calls are allowed per turn"
+                    )
                 else:
                     result = await execute_call(self.registry, call, self.confirm)
                 results.append(result)
                 if call.name == "finish" and result.ok:
                     finished = True
             return results
-        finish_index = next((i for i, c in enumerate(calls) if c.name == "finish"), None)
+        finish_index = next(
+            (i for i, c in enumerate(calls) if c.name == "finish"), None
+        )
         last = len(calls) if finish_index is None else finish_index + 1
         runnable = calls[: min(last, cap)]
         results = list(await execute_calls(self.registry, runnable, self.confirm))
         for index in range(len(runnable), len(calls)):
             if index >= last:
-                results.append(_skipped(calls[index], "skipped: calls after finish in the same turn are not run"))
+                results.append(
+                    _skipped(
+                        calls[index],
+                        "skipped: calls after finish in the same turn are not run",
+                    )
+                )
             else:
-                result.append(_skipped(calls[index], f"skipped: at most {cap} tool calls are allowed per turn"))
+                result.append(
+                    _skipped(
+                        calls[index],
+                        f"skipped: at most {cap} tool calls are allowed per turn",
+                    )
+                )
         return results
 
     async def run(self, user_message: str) -> AgentResult:
         history: List[dict] = [{"role": "user", "content": user_message}]
         steps: List[AgentStep] = []
-        completed = 0 # turns that finished without ending the run
+        completed = 0  # turns that finished without ending the run
 
         def end(answer: Optional[str], reason: str, turns: int) -> AgentResult:
-            return AgentResult(answer, reason, turns, history, steps, history_tokens(history))
+            return AgentResult(
+                answer, reason, turns, history, steps, history_tokens(history)
+            )
 
         for turn in range(1, self.max_turns + 1):
             if history_tokens(history) > self.max_tokens:
@@ -126,19 +158,38 @@ class AgentLoop:
                 history.append({"role": "assistant", "content": text})
                 if not self.require_finish:
                     return end(text, "answer", turn)
-                history.append({"role": "user", "content": "Reminder: deliver your final answer by calling the finish tool."})
+                history.append(
+                    {
+                        "role": "user",
+                        "content": "Reminder: deliver your final answer by calling the finish tool.",
+                    }
+                )
                 completed += 1
                 continue
             history.append({"role": "assistant", "tool_calls": raw_calls})
             calls = [
-                ToolCall(raw.get("id", f"call_{turn}_{index}"), raw.get("name", ""), raw.get("arguments", {}))
+                ToolCall(
+                    raw.get("id", f"call_{turn}_{index}"),
+                    raw.get("name", ""),
+                    raw.get("arguments", {}),
+                )
                 for index, raw in enumerate(raw_calls)
             ]
             results = await self._run_calls(calls)
             final_answer: Optional[str] = None
             for call, result in zip(calls, results):
                 message = result.to_message()
-                steps.append(AgentStep(turn, thought, call.name, call.arguments, result.ok, message["content"], result.ms))
+                steps.append(
+                    AgentStep(
+                        turn,
+                        thought,
+                        call.name,
+                        call.arguments,
+                        result.ok,
+                        message["content"],
+                        result.ms,
+                    )
+                )
                 if call.name == "finish" and result.ok:
                     final_answer = call.arguments["answer"]
             if final_answer is not None:
@@ -146,11 +197,15 @@ class AgentLoop:
             completed += 1
         return end(None, "max_turns", completed)
 
+
 def pretty_trace(result: AgentResult) -> None:
     for step in result.steps:
         print(f"[turn {step.turn}] thought: {step.thought or '-'}")
         print(f"    action: {step.tool}({json.dumps(step.arguments)})")
-        print(f"    observe: [{'ok' if step.ok else 'ERROR'}] {step.observation} ({step.ms} ms)")
-    print(f"stopped: {result.stop_reason} after {result.turns} turn(s), about {result.tokens_used} tokens")
+        print(
+            f"    observe: [{'ok' if step.ok else 'ERROR'}] {step.observation} ({step.ms} ms)"
+        )
+    print(
+        f"stopped: {result.stop_reason} after {result.turns} turn(s), about {result.tokens_used} tokens"
+    )
     print(f"answer: {result.answer}")
-

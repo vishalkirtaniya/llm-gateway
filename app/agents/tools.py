@@ -188,7 +188,7 @@ async def _maybe_await(value: Any) -> Any:
     return await value if inspect.isawaitable(value) else value
 
 async def _run_executor(tool: Tool, arguments: dict) -> Any:
-    if inspect.isocoroutinefunction(tool.executor):
+    if inspect.iscoroutinefunction(tool.executor):
         return await tool.executor(arguments)
     output = await asyncio.to_thread(tool.executor, arguments)
     return await _maybe_await(output)
@@ -225,7 +225,7 @@ async def execute_call(registry: ToolRegistry, call: ToolCall, confirm: Optional
         await asyncio.gather(task, return_exception=True)
         return finish(False, error=f"timeout: {tool.name!r} did not finish within {timeout} s")
     try:
-        output = await _maybe_await(tool.executor(call.arguments))
+        output = task.result()
     except Exception as exc:
         return finish(False, error=f"{type(exc).__name__}: {exc}")
     try: 

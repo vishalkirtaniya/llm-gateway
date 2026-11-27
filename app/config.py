@@ -1,20 +1,23 @@
 import os
-from pathlib import Path 
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class Settings:
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "nvidia/nemotron-3.5-super-vl:free")
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "nvidia/nemotron-3.5-embed-1b:free")
+    EMBEDDING_MODEL: str = os.getenv(
+        "EMBEDDING_MODEL", "nvidia/nemotron-3.5-embed-1b:free"
+    )
     APP_URL: str = os.getenv("APP_URL", "http://locahost:8000")
     APP_NAME: str = os.getenv("APP_NAME", "llm-gateway")
-    
+
     REQUEST_TIMEOUT: float = 60.0
-    MAX_RETRIES: int = 3 
+    MAX_RETRIES: int = 3
     MAX_OUTPUT_TOKENS: int = 2000
 
     CONTEXT_WINDOW: int = 128_000
@@ -39,12 +42,16 @@ class Settings:
 
     KNOWLEDGE_DIR: Path = Path(__file__).resolve().parent.parent / "data" / "knowledge"
 
-    JSON_MODE_SUPPORTED: bool = os.getenv("JSON_MODE_SUPPORTED", "false").lower() == "true"
+    JSON_MODE_SUPPORTED: bool = (
+        os.getenv("JSON_MODE_SUPPORTED", "false").lower() == "true"
+    )
     STRUCTURED_MAX_RETRIES: INT = 3
 
     EMBED_QUERY_PREFIX: str = os.getenv("EMBED_QUERY_PREFIX", "")
     EMBED_DOC_PREFIX: str = os.getenv("EMBED_DOC_PREFIX", "")
-    EMBED_CACHE_PATH: Path = Path(__file__).resolve().parent.parent / ".cache" / "embeddings.json"
+    EMBED_CACHE_PATH: Path = (
+        Path(__file__).resolve().parent.parent / ".cache" / "embeddings.json"
+    )
     EMBED_BATCH_SIZE: int = 32
     MIN_SCORE: float = 0.18
 
@@ -58,5 +65,5 @@ class Settings:
     TOOL_TIMEOUT_S: float = 10.0
     TOOL_MAX_CONCURRENCY: int = 4
 
-settings = Settings()
 
+settings = Settings()
