@@ -45,7 +45,7 @@ class Settings:
     JSON_MODE_SUPPORTED: bool = (
         os.getenv("JSON_MODE_SUPPORTED", "false").lower() == "true"
     )
-    STRUCTURED_MAX_RETRIES: INT = 3
+    STRUCTURED_MAX_RETRIES: int = 3
 
     EMBED_QUERY_PREFIX: str = os.getenv("EMBED_QUERY_PREFIX", "")
     EMBED_DOC_PREFIX: str = os.getenv("EMBED_DOC_PREFIX", "")
@@ -68,6 +68,18 @@ class Settings:
     REWOO_MAX_STEPS: int = 8
     REWOO_MAX_REPLANS: int = 1
     REWOO_MAX_EVIDENCE_CHARS: int = 6000
+
+    MEMORY_MAX_CONTEXT_TOKENS: int = 400
+    MEMORY_CORE_MAX_CHARS: int = 500
+    MEMORY_SEARCH_TOP_K: int = 3
+    MEMORY_SUMMARY_SHARE: float = 0.25
+    MEMORY_SUMMARY_SNIPPET_CHARS: int = 60
+    MEMORY_MAX_EVICTED: int = 500
+    MEMORY_MAX_CORE_SECTIONS: int = 6
+    MEMORY_CORE_SHARE: float = 0.4
+    MEMORY_MIN_SCORE: float = 0.4
+    MEMORY_MAX_EVICTED: int = 500
+    MEMORY_ARCHIVAL_MAX_CHARS: int = 2000
 
 
 settings = Settings()
