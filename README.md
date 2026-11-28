@@ -76,7 +76,7 @@ Seven lessons from Phase 13 (Tools & Protocols) and Phase 14 (Agent Engineering)
   - Applied: the model writes a full plan with placeholders first, tools fill the placeholders, and a final step writes the answer. Compare it with the Stage 11 loop on call count and tokens, which matters on a rate-limited free tier.
   - Files: `app/planner.py`
   - Done when: the same question is answered with fewer LLM calls than the agent loop, with the comparison in the evidence log.
-- [ ] **Stage 14 · Memory: virtual context**: Phase 14 · Lesson 07, "Virtual Context and MemGPT" ([Phase 14 folder](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering))
+- [x] **Stage 14 · Memory: virtual context**: Phase 14 · Lesson 07, "Virtual Context and MemGPT" ([Phase 14 folder](https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/phases/14-agent-engineering))
   - Applied: the context window as RAM and an external store as disk, with the agent paging between them. Builds on Stage 7 (history compression) and Stage 6 (retrieval).
   - Files: `app/memory.py`
   - Done when: a fact stated 30 turns ago is recalled after it has been evicted from the window.
